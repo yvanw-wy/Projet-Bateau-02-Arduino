@@ -1,34 +1,36 @@
 //Include all the libraries used throughout the program
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-#include <Adafruit_GPS.h>
-#include <SoftwareSerial.h>
-#include <Arduino.h>
-#include <Servo.h>
+#include <Wire.h> //Include the Wire.h library
+#include <LiquidCrystal_I2C.h> //This libraru controls the display via the I2C bus
+#include <Adafruit_GPS.h> //This library controls the GPS
+#include <SoftwareSerial.h> //Thi slibrary is called by the Adafruit GPS to send and recieve data
+#include <Arduino.h> //
+#include <Servo.h> //This library is used to control the servo, which will be connected to our rudder
+#include <SPI.h> //This library is needed by WiFiNINA
+#include <WiFiNINA.h> //This library enables the creation of a WebServer
 
 #include "bmm150.h"
-#include "bmm150_defs.h"
+#include "bmm150_defs.h" //Both of these libraries are called by the magnetometer - No idea why they don't use the regular ²
 
-//define global variables that link a pin to any set of characters for future use
-#define enA 11
-#define in1 6
-#define in2 7
-#define button 4
-#define GPSECHO  true
+//define global paths that link a pin to any set of characters for future use
+#define enA 11 //Whenever enA is called, it will refer to pin D11 no matter in which function
+#define in1 6 //Whenever in1 is called, it will refer to pin D6 no matter in which fucntion
+#define in2 7 //Whenever in2 is called, it will refer to pin D7 no matter in which function
+#define button 4 //Whenever button is called, it will refer to pin D4 no matter in which loop
+#define GPSECHO  true //We define this path as a boolean. The value is set to true
 
-BMM150 bmm = BMM150();
-Servo myservo;
-SoftwareSerial mySerial(3, 2);
-Adafruit_GPS GPS(&mySerial);
-int val;
-int rotDirection = 0;
-int pressed = false;
+BMM150 bmm = BMM150(); //The string bmm will reffer to the BMM150 function in the library BMM150
+Servo myservo; //
+SoftwareSerial mySerial(3, 2); //
+Adafruit_GPS GPS(&mySerial); //
+int val; //We define a globabl variable val, which will always be an integer
+int rotDirection = 0; //We define a globabl variable rotDirection, which will always be an integer
+int pressed = false; //We define a globabl variable pressed, which will always be an integer (a boolean is considered an integer)
 
 
-const int currentPin = A0;
-int sensitivity = 66;
-int adcValue= 0;
-int offsetVoltage = 2500;
+const int currentPin = A0; //we define a global path to A0 - the #define dunction can only be used for digital pins
+int sensitivity = 66; //We de fine a global variable sensitivity with a defualt value of 66, which will always be an integer
+int adcValue = 0; //We define a globabl variable adcValue with a default value of 0, which will always be an integer
+int offsetVoltage = 2500; //We define a globabl variable offsetVoltage with a default value of 2500, which will always be an integer
 double adcVoltage = 0;
 double currentValue = 0;
 
@@ -40,48 +42,48 @@ LiquidCrystal_I2C lcd(0x27,16,2); //Tell the display to use 0x27 as its I2C addr
 void setup() {
 
 
-  Serial.begin(115200);
+  Serial.begin(115200); //Starts a serial output with a baud rate of 115200 on the default port
 
-  pinMode(enA, OUTPUT);
-  pinMode(in1, OUTPUT);
-  pinMode(in2, OUTPUT);
-  pinMode(button, INPUT);
-  digitalWrite(in1, LOW);
-  digitalWrite(in2, HIGH);
+  pinMode(enA, OUTPUT); //Sets the pin mode to output for enA (11)
+  pinMode(in1, OUTPUT); //Sets the pin mode to output for in1 (6)
+  pinMode(in2, OUTPUT); //Sets the pin mode to output for in2 (7)
+  pinMode(button, INPUT); //Sets the pin mode to input for button (4)
+  digitalWrite(in1, LOW); //Sets the default output of pin in1 to low (off)
+  digitalWrite(in2, HIGH); //Sets the default ouput of pin in2 to high (on)
 
-  myservo.attach(9);
+  myservo.attach(9); //attach the myservo command to pin D9
 
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
 
-  if(bmm.initialize() == BMM150_E_ID_NOT_CONFORM) {
+  if(bmm.initialize() == BMM150_E_ID_NOT_CONFORM) { //If the initialization of the magnetometer fails, stop here
     Serial.println("Magnetometer not found");
     while(1);
   }
 
-  else {
+  else { //If it does not fail
 
-    Serial.println("Magnetometer ready");
+    Serial.println("Magnetometer ready"); //Say it's redy and carry on
   }
 
 
 
 
-  lcd.init();
-  lcd.backlight();
+  lcd.init(); //Initiate the LCD display
+  lcd.backlight(); //Turn on the backlight of the diplay
 
-  lcd.setCursor(1,0);
-  lcd.print(" Boat Project");
-  lcd.setCursor(1,1);
-  lcd.print("   Group D");
+  lcd.setCursor(1,0); //Place the cursor at position 1,0 (Line 1, column 0)
+  lcd.print(" Boat Project"); //Print the sting there
+  lcd.setCursor(1,1); //Move the cursor over to position 1,1 (Line 1, column 1)
+  lcd.print("   Group D"); //Print this string
 
-  myservo.write(0);
+  myservo.write(0); //Send 0 via the pin attached to myservo (D9)
 
-  delay(2000);
+  delay(2000); //Wait for 2000ms (2s)
 
-  mySerial.println(PMTK_Q_RELEASE);
+  mySerial.println(PMTK_Q_RELEASE); //Print the output of the command PMTK_Q_RELEASE in the console
 
 
 }
