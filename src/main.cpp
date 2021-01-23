@@ -39,7 +39,7 @@ double currentValue = 0;
 LiquidCrystal_I2C lcd(0x27,16,2); //Tell the display to use 0x27 as its I2C address, and set it up as 16 column / 2 line
 
 
-void setup() {
+void setup() { //This function is used to setup everything. It will only run once upon startup
 
 
   Serial.begin(115200); //Starts a serial output with a baud rate of 115200 on the default port
@@ -58,14 +58,14 @@ void setup() {
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
 
-  if(bmm.initialize() == BMM150_E_ID_NOT_CONFORM) { //If the initialization of the magnetometer fails, stop here
+  if(bmm.initialize() == BMM150_E_ID_NOT_CONFORM) { //If the initialization of the magnetometer fails
     Serial.println("Magnetometer not found");
-    while(1);
+    while(1); //Stop the run here
   }
 
   else { //If it does not fail
 
-    Serial.println("Magnetometer ready"); //Say it's redy and carry on
+    Serial.println("Magnetometer ready"); //Say it's ready and carry on
   }
 
 
@@ -94,7 +94,7 @@ uint32_t timer = millis();
 
 
 
-void loop() {
+void loop() { //This function will run over and over until the arduino is shut down
 
 
   char c = GPS.read();
@@ -142,21 +142,23 @@ void loop() {
     }
   }
 
-  int potValue = analogRead(A7);
-  int pwmOutput = map(potValue, 0, 1023, 0 , 255);
-  analogWrite(enA, pwmOutput);
+  int potValue = analogRead(A7); //sets-up a variable in teh scope of this function, which takes the value read on pin A7
+  int pwmOutput = map(potValue, 0, 1023, 0 , 255); //Match the expected output (between 0 and 1023) to a lower range (0 to 255). Set that value to the variable pwmOutput
+  analogWrite(enA, pwmOutput); //Write the value of pwmOutput to pin enA (11)
 
-  if (digitalRead(button) == true) {
-    pressed = !pressed;
+  if (digitalRead(button) == true) { //Read the value of the "button", if it is true
+    pressed = !pressed; //set the value of the variable pressed to its oppisite (1 -> -1, true -> false)
   }
 
-  while (digitalRead(button) == true);
-  delay(20);
+  while (digitalRead(button) == true); //While the value of "button" is true - While the button is pressed down
+  delay(20); //Wait 20ms
 
-  if ((pressed == true)  & (rotDirection == 0)) {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    rotDirection = 1;
+
+//This part changes the direction the motor rotates, when the button is pressed
+  if ((pressed == true)  & (rotDirection == 0)) { //If the button is pressed and the rotation is in the 0 direction
+    digitalWrite(in1, HIGH); //Set the value on pin in1 to high
+    digitalWrite(in2, LOW); //Set the value on pin in2 to low
+    rotDirection = 1; //Set the direction of the rotation to 1 - Tells the program the way the motor rotates
     delay(20);
   }
 
