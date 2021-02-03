@@ -1,3 +1,6 @@
 .pio
 .clang_complete
 .gcc-flags.json
+launch.json
+extensions.json
+c_cpp_properties.json
