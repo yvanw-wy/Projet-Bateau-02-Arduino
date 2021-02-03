@@ -97,7 +97,7 @@ uint32_t timer = millis();
 void loop() { //This function will run over and over until the arduino is shut down
 
 
-  char c = GPS.read();
+  char c = GPS.read(); //The value read from the GPS is inserted as the variable 'c'
   if ((c) && (GPSECHO))
     Serial.write(c);
 
@@ -142,7 +142,7 @@ void loop() { //This function will run over and over until the arduino is shut d
     }
   }
 
-  int potValue = analogRead(A7); //sets-up a variable in teh scope of this function, which takes the value read on pin A7
+  int potValue = analogRead(A7); //sets-up a variable in the scope of this function, which takes the value read on pin A7
   int pwmOutput = map(potValue, 0, 1023, 0 , 255); //Match the expected output (between 0 and 1023) to a lower range (0 to 255). Set that value to the variable pwmOutput
   analogWrite(enA, pwmOutput); //Write the value of pwmOutput to pin enA (11)
 
@@ -185,7 +185,7 @@ void loop() { //This function will run over and over until the arduino is shut d
   float headingDegrees = heading * 180/M_PI;
   delay(100);
 
-lcd.setCursor(0,0);
+lcd.setCursor(0,0); //The following lines display the cardinal heading of the boat
 
   if((337.6 <= headingDegrees && headingDegrees <= 360) || (0 <= headingDegrees && headingDegrees <= 22.5)) {
     lcd.print(headingDegrees);
@@ -236,8 +236,9 @@ lcd.setCursor(0,0);
   }
 
   else {
-    lcd.print("error - bad data");
+    lcd.print("error - bad data"); //If the value is not in the range of all previous statements, we assume the data is corrupted
   }
+  //ends here
 
 
   val = map(headingDegrees, 0, 360, 0, 45);
