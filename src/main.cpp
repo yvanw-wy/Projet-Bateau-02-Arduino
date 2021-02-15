@@ -7,6 +7,9 @@
 #include <Servo.h> //This library is used to control the servo, which will be connected to our rudder
 #include <SPI.h> //This library is needed by WiFiNINA
 #include <WiFiNINA.h> //This library enables the creation of a WebServer
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
 
 #include "bmm150.h"
 #include "bmm150_defs.h" //Both of these libraries are called by the magnetometer - No idea why they don't use the regular ²
@@ -14,7 +17,6 @@
 //define global paths that link a pin to any set of characters for future use
 #define enA 11 //Whenever enA is called, it will refer to pin D11 no matter in which function
 #define in1 6 //Whenever in1 is called, it will refer to pin D6 no matter in which fucntion
-#define in2 7 //Whenever in2 is called, it will refer to pin D7 no matter in which function
 #define button 4 //Whenever button is called, it will refer to pin D4 no matter in which loop
 #define GPSECHO  true //We define this path as a boolean. The value is set to true
 
@@ -46,10 +48,8 @@ void setup() { //This function is used to setup everything. It will only run onc
 
   pinMode(enA, OUTPUT); //Sets the pin mode to output for enA (11)
   pinMode(in1, OUTPUT); //Sets the pin mode to output for in1 (6)
-  pinMode(in2, OUTPUT); //Sets the pin mode to output for in2 (7)
   pinMode(button, INPUT); //Sets the pin mode to input for button (4)
   digitalWrite(in1, LOW); //Sets the default output of pin in1 to low (off)
-  digitalWrite(in2, HIGH); //Sets the default ouput of pin in2 to high (on)
 
   myservo.attach(9); //attach the myservo command to pin D9
 
@@ -157,14 +157,12 @@ void loop() { //This function will run over and over until the arduino is shut d
 //This part changes the direction the motor rotates, when the button is pressed
   if ((pressed == true)  & (rotDirection == 0)) { //If the button is pressed and the rotation is in the 0 direction
     digitalWrite(in1, HIGH); //Set the value on pin in1 to high
-    digitalWrite(in2, LOW); //Set the value on pin in2 to low
     rotDirection = 1; //Set the direction of the rotation to 1 - Tells the program the way the motor rotates
     delay(20);
   }
 
   if ((pressed == false) & (rotDirection == 1)) {
     digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
     rotDirection = 0;
     delay(20);
   }
