@@ -1,114 +1,141 @@
-//Include all the libraries used throughout the program
-#include <Wire.h> //Include the Wire.h library
-#include <LiquidCrystal_I2C.h> //This libraru controls the display via the I2C bus
-#include <Adafruit_GPS.h> //This library controls the GPS
-#include <SoftwareSerial.h> //Thi slibrary is called by the Adafruit GPS to send and recieve data
-#include <Arduino.h> //
-#include <Servo.h> //This library is used to control the servo, which will be connected to our rudder
-#include <SPI.h> //This library is needed by WiFiNINA
-#include <WiFiNINA.h> //This library enables the creation of a WebServer
-#include <SPI.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_GPS.h>
+#include <SoftwareSerial.h>
+#include <Arduino.h>
+#include <Servo.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-
-#include "bmm150.h"
-#include "bmm150_defs.h" //Both of these libraries are called by the magnetometer - No idea why they don't use the regular ²
-
-//define global paths that link a pin to any set of characters for future use
-#define enA 11 //Whenever enA is called, it will refer to pin D11 no matter in which function
-#define in1 6 //Whenever in1 is called, it will refer to pin D6 no matter in which fucntion
-#define button 4 //Whenever button is called, it will refer to pin D4 no matter in which loop
-#define GPSECHO  true //We define this path as a boolean. The value is set to true
-
-BMM150 bmm = BMM150(); //The string bmm will reffer to the BMM150 function in the library BMM150
-Servo myservo; //
-SoftwareSerial mySerial(3, 2); //
-Adafruit_GPS GPS(&mySerial); //
-int val; //We define a globabl variable val, which will always be an integer
-int rotDirection = 0; //We define a globabl variable rotDirection, which will always be an integer
-int pressed = false; //We define a globabl variable pressed, which will always be an integer (a boolean is considered an integer)
+#include <bmm150.h>
+#include <bmm150_defs.h>
+#include <SPI.h>
+#include <WiFiNINA.h>
+#include "arduino_secrets.h" 
 
 
-const int currentPin = A0; //we define a global path to A0 - the #define dunction can only be used for digital pins
-int sensitivity = 66; //We de fine a global variable sensitivity with a defualt value of 66, which will always be an integer
-int adcValue = 0; //We define a globabl variable adcValue with a default value of 0, which will always be an integer
-int offsetVoltage = 2500; //We define a globabl variable offsetVoltage with a default value of 2500, which will always be an integer
-double adcVoltage = 0;
-double currentValue = 0;
+#define MotorEnable 11
+#define in1 6
+#define ChangeRotation 4
 
 
+//WIFI AP
+char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS;
+int keyIndex = 0;
 
-LiquidCrystal_I2C lcd(0x27,16,2); //Tell the display to use 0x27 as its I2C address, and set it up as 16 column / 2 line
+int led =  LED_BUILTIN;
+int status = WL_IDLE_STATUS;
+WiFiServer server(80);
+//WIFI AP
 
+//GPS
+SoftwareSerial mySerial(8, 7);
+Adafruit_GPS GPS(&mySerial);
+#define GPSECHO  true
+//GPS
 
-void setup() { //This function is used to setup everything. It will only run once upon startup
+// HTML code
+String html ="<!doctype html> <html> <head> <title>Cursor Hover Effects</title> <link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\"> <link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\"> </head> <body> <ul> <li><a href=\"#\"><i class=\"fa fa-gift\" aria-hidden=\"true\"></i></a></li> <li><a href=\"#\"><i class=\"fa fa-glass\" aria-hidden=\"true\"></i></a></li> <li><a href=\"#\"><i class=\"fa fa-heart\" aria-hidden=\"true\"></i></a></li> <li><a href=\"#\"><i class=\"fa fa-globe\" aria-hidden=\"true\"></i></a></li> <li><a href=\"#\"><i class=\"fa fa-graduation-cap\" aria-hidden=\"true\"></i></a></li> <div class=\"cursor\"></div> </ul> <script type=\"text/javascript\"> const cursor = document.querySelector('.cursor'); document.addEventListener('mousemove', (e) => { cursor.style.left = e.pageX + \"px\"; cursor.style.top = e.pageY + \"px\"; }); </script> </body> </html> <style> * { margin: 0; padding: 0; } body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; } ul { position: relative; display: flex; } ul li { list-style: none; margin: 0 20px; } ul li a { position: relative; display: inline-block; font-size: 2em; text-decoration: none; color: #fff; transition: 0.2s; } ul li:hover a { color: #2196f3; } ul .cursor { position: fixed; width: 0; height: 0; border: 4px solid #fff; border-radius: 50%; transform: translate(-50%,-50%); transition: width 0.2s,height 0.2s; pointer-events: none; } ul li:hover ~ .cursor { transform: translate(-50%,-50%); width: 60px; height: 60px; border: 2px solid #2196f3; } </style>";
+//HTML code
 
+void setup() {
 
-  Serial.begin(115200); //Starts a serial output with a baud rate of 115200 on the default port
+  //WIFI AP ------------------------------------------------------------------------
 
-  pinMode(enA, OUTPUT); //Sets the pin mode to output for enA (11)
-  pinMode(in1, OUTPUT); //Sets the pin mode to output for in1 (6)
-  pinMode(button, INPUT); //Sets the pin mode to input for button (4)
-  digitalWrite(in1, LOW); //Sets the default output of pin in1 to low (off)
+  Serial.begin(9600);
+  while (!Serial) {
+  }
 
-  myservo.attach(9); //attach the myservo command to pin D9
+  Serial.println("Access Point Web Server");
 
+  pinMode(led, OUTPUT);
+
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println("Communication with WiFi module failed!");
+    while (true);
+  }
+
+  String fv = WiFi.firmwareVersion();
+  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
+    Serial.println("Please upgrade the firmware");
+  }
+
+  // by default the local IP address will be 192.168.4.1
+  // you can override it with the following:
+  // WiFi.config(IPAddress(10, 0, 0, 1));
+
+  Serial.print("Creating access point named: ");
+  Serial.println(ssid);
+
+  status = WiFi.beginAP(ssid, pass);
+  if (status != WL_AP_LISTENING) {
+    Serial.println("Creating access point failed");
+    while (true);
+  }
+
+  delay(10000);
+
+  server.begin();
+
+  printWiFiStatus();
+//WIFI AP ------------------------------------------------------------------------
+
+//GPS ----------------------------------------------------------------------------
+ Serial.begin(115200);
+  delay(5000);
+  Serial.println("Adafruit GPS library basic test!");
+
+  // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
+
+  // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
+  // uncomment this line to turn on only the "minimum recommended" data
+  //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
+  // For parsing data, we don't suggest using anything but either RMC only or RMC+GGA since
+  // the parser doesn't care about other sentences at this time
+
+  // Set the update rate
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);   // 1 Hz update rate
+  // For the parsing code to work nicely and have time to sort thru the data, and
+  // print it out we don't suggest using anything higher than 1 Hz
+
+  // Request updates on antenna status, comment out to keep quiet
   GPS.sendCommand(PGCMD_ANTENNA);
 
-  if(bmm.initialize() == BMM150_E_ID_NOT_CONFORM) { //If the initialization of the magnetometer fails
-    Serial.println("Magnetometer not found");
-    while(1); //Stop the run here
-  }
+  delay(1000);
+  // Ask for firmware version
+  mySerial.println(PMTK_Q_RELEASE);
+//GPS ----------------------------------------------------------------------------
 
-  else { //If it does not fail
-
-    Serial.println("Magnetometer ready"); //Say it's ready and carry on
-  }
-
-
-
-
-  lcd.init(); //Initiate the LCD display
-  lcd.backlight(); //Turn on the backlight of the diplay
-
-  lcd.setCursor(1,0); //Place the cursor at position 1,0 (Line 1, column 0)
-  lcd.print(" Boat Project"); //Print the sting there
-  lcd.setCursor(1,1); //Move the cursor over to position 1,1 (Line 1, column 1)
-  lcd.print("   Group D"); //Print this string
-
-  myservo.write(0); //Send 0 via the pin attached to myservo (D9)
-
-  delay(2000); //Wait for 2000ms (2s)
-
-  mySerial.println(PMTK_Q_RELEASE); //Print the output of the command PMTK_Q_RELEASE in the console
 
 
 }
 
 
-
 uint32_t timer = millis();
 
 
-
-void loop() { //This function will run over and over until the arduino is shut down
-
-
-  char c = GPS.read(); //The value read from the GPS is inserted as the variable 'c'
+void GPSCODE() {
+  char c = GPS.read();
+  // if you want to debug, this is a good time to do it!
   if ((c) && (GPSECHO))
     Serial.write(c);
 
+  // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
+    // a tricky thing here is if we print the NMEA sentence, or data
+    // we end up not listening and catching other sentences!
+    // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+    //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
 
-    if (!GPS.parse(GPS.lastNMEA()))
-      return;
+    if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
+      return;  // we can fail to parse a sentence in which case we should just wait for another
   }
 
+  // approximately every 2 seconds or so, print out the current stats
   if (millis() - timer > 2000) {
-    timer = millis();
+    timer = millis(); // reset the timer
 
     Serial.print("\nTime: ");
     if (GPS.hour < 10) { Serial.print('0'); }
@@ -141,112 +168,88 @@ void loop() { //This function will run over and over until the arduino is shut d
       Serial.print("Satellites: "); Serial.println((int)GPS.satellites);
     }
   }
+}
 
-  int potValue = analogRead(A7); //sets-up a variable in the scope of this function, which takes the value read on pin A7
-  int pwmOutput = map(potValue, 0, 1023, 0 , 255); //Match the expected output (between 0 and 1023) to a lower range (0 to 255). Set that value to the variable pwmOutput
-  analogWrite(enA, pwmOutput); //Write the value of pwmOutput to pin enA (11)
+void START_WIFI(){
+  // compare the previous status to the current status
+  if (status != WiFi.status()) {
+    // it has changed update the variable
+    status = WiFi.status();
 
-  if (digitalRead(button) == true) { //Read the value of the "button", if it is true
-    pressed = !pressed; //set the value of the variable pressed to its oppisite (1 -> -1, true -> false)
+    if (status == WL_AP_CONNECTED) {
+      // a device has connected to the AP
+      Serial.println("Device connected to AP");
+    } else {
+      // a device has disconnected from the AP, and we are back in listening mode
+      Serial.println("Device disconnected from AP");
+    }
   }
+  
+  WiFiClient client = server.available();   // listen for incoming clients
 
-  while (digitalRead(button) == true); //While the value of "button" is true - While the button is pressed down
-  delay(20); //Wait 20ms
+  if (client) {                             // if you get a client,
+    Serial.println("new client");           // print a message out the serial port
+    String currentLine = "";                // make a String to hold incoming data from the client
+    while (client.connected()) {            // loop while the client's connected
+      if (client.available()) {             // if there's bytes to read from the client,
+        char c = client.read();             // read a byte, then
+        Serial.write(c);                    // print it out the serial monitor
+        if (c == '\n') {                    // if the byte is a newline character
 
+          // if the current line is blank, you got two newline characters in a row.
+          // that's the end of the client HTTP request, so send a response:
+          if (currentLine.length() == 0) {
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            // and a content-type so the client knows what's coming, then a blank line:
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println("Connection: close");
+            client.println(html);
 
-//This part changes the direction the motor rotates, when the button is pressed
-  if ((pressed == true)  & (rotDirection == 0)) { //If the button is pressed and the rotation is in the 0 direction
-    digitalWrite(in1, HIGH); //Set the value on pin in1 to high
-    rotDirection = 1; //Set the direction of the rotation to 1 - Tells the program the way the motor rotates
-    delay(20);
+            break;
+          }
+          else {      // if you got a newline, then clear currentLine:
+            currentLine = "";
+          }
+        }
+        else if (c != '\r') {    // if you got anything else but a carriage return character,
+          currentLine += c;      // add it to the end of the currentLine
+        }
+
+        // Check to see if the client request was "GET /H" or "GET /L":
+        if (currentLine.endsWith("GET /H")) {
+          digitalWrite(led, HIGH);               // GET /H turns the LED on
+        }
+        if (currentLine.endsWith("GET /L")) {
+          digitalWrite(led, LOW);                // GET /L turns the LED off
+        }
+      }
+    }
+    // close the connection:
+    client.stop();
+    Serial.println("client disconnected");
   }
+}
 
-  if ((pressed == false) & (rotDirection == 1)) {
-    digitalWrite(in1, LOW);
-    rotDirection = 0;
-    delay(20);
-  }
+void printWiFiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
 
-  lcd.clear();
+  // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
 
-  bmm150_mag_data value;
-  bmm.read_mag_data();
-  value.x = bmm.raw_mag_data.raw_datax;
-  value.y = bmm.raw_mag_data.raw_datay;
-  value.z = bmm.raw_mag_data.raw_dataz;
-  float xyHeading = atan2(value.x, value.y);
-  float heading = xyHeading;
-  if(heading < 0)
-  heading += 2*PI;
-  if(heading > 2*PI)
-  heading -= 2*PI;
-  float headingDegrees = heading * 180/M_PI;
-  delay(100);
+  // print where to go in a browser:
+  Serial.print("To see this page in action, open a browser to http://");
+  Serial.println(ip);
+}
 
-lcd.setCursor(0,0); //The following lines display the cardinal heading of the boat
+void SCREENAUTOPILOT() {}
 
-  if((337.6 <= headingDegrees && headingDegrees <= 360) || (0 <= headingDegrees && headingDegrees <= 22.5)) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(15,0);
-    lcd.print("N");
-  }
+void SCREENREMOTE() {}
 
-  else if(22.51 <= headingDegrees && headingDegrees <= 67.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(14,0);
-    lcd.print("NE");
-  }
-
-  else if(67.51 <= headingDegrees && headingDegrees <= 112.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(15,0);
-    lcd.print("E");
-  }
-
-  else if(112.51 <= headingDegrees && headingDegrees <= 157.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(14,0);
-    lcd.print("SE");
-  }
-
-  else if(157.51 <= headingDegrees && headingDegrees <= 202.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(15,0);
-    lcd.print("S");
-  }
-
-  else if(202.51 <= headingDegrees && headingDegrees <= 247.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(14,0);
-    lcd.print("SW");
-  }
-
-  else if(247.51 <= headingDegrees && headingDegrees <= 292.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(15,0);
-    lcd.print("W");
-  }
-
-  else if(292.51 <= headingDegrees && headingDegrees <= 337.5) {
-    lcd.print(headingDegrees);
-    lcd.setCursor(14,0);
-    lcd.print("NW");
-  }
-
-  else {
-    lcd.print("error - bad data"); //If the value is not in the range of all previous statements, we assume the data is corrupted
-  }
-  //ends here
-
-
-  val = map(headingDegrees, 0, 360, 0, 45);
-  myservo.write(val*4);
-
-  lcd.setCursor(0,1);
-  lcd.print("Angle:");
-  lcd.setCursor(7,1);
-  lcd.print(val*4);
-
-  delay(500);
-
+void loop() {
+  START_WIFI();
 }
