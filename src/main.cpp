@@ -170,7 +170,7 @@ void GPSCODE() {
   }
 }
 
-void START_WIFI(){
+void RUN_WIFI(){
   // compare the previous status to the current status
   if (status != WiFi.status()) {
     // it has changed update the variable
@@ -251,5 +251,6 @@ void SCREENAUTOPILOT() {}
 void SCREENREMOTE() {}
 
 void loop() {
-  START_WIFI();
+  RUN_WIFI();
+  GPSCODE();
 }
