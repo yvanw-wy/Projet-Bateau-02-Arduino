@@ -33,12 +33,29 @@ Adafruit_GPS GPS(&mySerial);
 
 unsigned long time;
 unsigned long wifitime;
+
 uint32_t gpstime = millis();
+
+//=============================================================================================================================================================================================
+
+void printWiFiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print where to go in a browser:
+  Serial.print("To see this page in action, open a browser to http://");
+  Serial.println(ip);
+
+}
 
 //==============================================================================================================================================================================================
 void WIFI_SETUP() {
-
-    wifitime = time;
 
         while(!Serial) {
         ;
@@ -57,28 +74,7 @@ void WIFI_SETUP() {
     while (true);
   }
 
-  if (time - wifitime > 5000) {
-      server.begin();
-      printWiFiStatus();
-  }
 
-}
-
-//=============================================================================================================================================================================================
-
-void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print where to go in a browser:
-  Serial.print("To see this page in action, open a browser to http://");
-  Serial.println(ip);
 
 }
 
@@ -99,6 +95,13 @@ void setup() {
     Serial.begin(9600);
     WIFI_SETUP();
     GPS_SETUP();
+    
+    wifitime = time;
+
+    if (time - wifitime > 5000) {
+      server.begin();
+      printWiFiStatus();
+    }
 }
 
 //=============================================================================================================================================================================================
@@ -197,6 +200,7 @@ void WIFICODE() {
             // the content of the HTTP response follows the header:
             client.print("Click <a href=\"/H\">here</a> turn the LED on<br>");
             client.print("Click <a href=\"/L\">here</a> turn the LED off<br>");
+            client.println("Check this out" + GPS.latitude + "boi");
 
             // The HTTP response ends with another blank line:
             client.println();
