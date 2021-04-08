@@ -7,7 +7,7 @@
  * - Total sketch size: Max 92% (With the code of sensors + actionners such as joystick, Button), 
  *   Min 80% (Without the code of sensors) °___°;
  *   
- * - Fiability: Around 80% with an antenna connected to the Arduino and 20% in the opposite case 
+ * - Fiability: Around 90% with an antenna connected to the Arduino and 20% in the opposite case 
  * - Connection stability: Not bad, not good === In the middle
  * 
  */
